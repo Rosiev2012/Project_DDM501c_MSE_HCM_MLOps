@@ -3,6 +3,7 @@
 [![CI/CD Pipeline](https://github.com/Rosiev2012/Project_DDM501c_MSE_HCM_MLOps/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Rosiev2012/Project_DDM501c_MSE_HCM_MLOps/actions/workflows/ci-cd.yml)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-ready-green.svg)](https://www.docker.com/)
+[![Docker Hub](https://img.shields.io/badge/docker%20hub-auto--deploy-blue.svg)](https://hub.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 📖 Mô tả dự án
@@ -65,15 +66,39 @@ chmod +x run_project.sh
 
 ### **🐳 Docker Deployment (Production)**
 
+#### **📦 Auto-Deploy from Docker Hub (Recommended)**
 ```bash
-# Build và run với Docker
-docker build -t ml-model-api:v1.0 .
-docker run -p 8000:8000 --name ml-api \
-  ml-model-api:v1.0 bash -c "python ml_pipeline.py && python api_service.py"
+# Pull latest auto-built image from CI/CD
+docker pull {dockerhub-username}/ml-model-api:latest
 
-# Hoặc sử dụng docker-compose
+# Run production container
+docker run -d -p 5001:5001 --name ml-api \
+  {dockerhub-username}/ml-model-api:latest
+
+# Access application
+curl http://localhost:5001/health
+```
+
+#### **🛠️ Manual Build (Development)**
+```bash
+# Build locally (optimized)
+docker build -t ml-model-api:latest .
+
+# Run with local build
+docker run -d -p 5001:5001 --name ml-api \
+  ml-model-api:latest
+
+# Or use docker-compose for development
 docker-compose up -d
 ```
+
+**📋 Docker Hub Integration:**
+- ✅ **Auto-build** on every push to master
+- ✅ **Multi-platform** support (linux/amd64)
+- ✅ **GitHub Actions** powered CI/CD
+- ✅ **Public registry** for easy deployment
+
+> **Setup Guide**: See `DOCKER_HUB_SETUP.md` for credentials configuration
 
 ### **💻 Manual Setup (Development)**
 
