@@ -1,8 +1,6 @@
 {
-  "model_type": "RandomForest_CI",
-  "accuracy": 0.9866666666666667,
-  "n_samples": 500,
-  "n_features": 10,
-  "train_time": "1.12s",
-  "optimized_for": "CI_speed"
+  "model_name": "XGBoost",
+  "accuracy": 0.8666666666666667,
+  "features": 10,
+  "training_samples": 1400
 }
