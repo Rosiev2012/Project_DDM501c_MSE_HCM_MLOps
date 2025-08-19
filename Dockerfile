@@ -51,9 +51,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Copy application files
 COPY ml_pipeline.py .
-COPY api_service.py .
 COPY app.py .
-COPY test_api.py .
 COPY templates/ templates/
 
 # Create models directory
@@ -63,14 +61,14 @@ RUN mkdir -p models && chown -R appuser:appuser /app
 USER appuser
 
 # Expose ports
-EXPOSE 5001 8000
+EXPOSE 5001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f http://localhost:5001/health || exit 1
 
 # Default command (can be overridden)
-CMD ["python", "api_service.py"]
+CMD ["python", "app.py"]
 
 # Labels for metadata
 LABEL maintainer="ML Team" \

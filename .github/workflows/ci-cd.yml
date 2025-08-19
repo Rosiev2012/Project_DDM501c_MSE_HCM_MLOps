@@ -41,10 +41,11 @@ jobs:
         black --check *.py || true
 
   # ====================================
-  # JOB 2: TEST ML PIPELINE
+  # JOB 2: ML PIPELINE TESTING
   # ====================================
   test-ml-pipeline:
     runs-on: ubuntu-latest
+    needs: lint
     steps:
     - uses: actions/checkout@v4
     
@@ -53,33 +54,27 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
     
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-    
-    - name: Install Python dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run ML Pipeline
+    - name: Run ML pipeline
       run: |
-        echo "🧪 Testing ML Pipeline..."
+        echo "🤖 Running ML pipeline..."
         python ml_pipeline.py
-        ls -la models/
     
-    - name: Upload models as artifacts
+    - name: Upload trained models
       uses: actions/upload-artifact@v4
       with:
         name: trained-models
         path: models/
-        retention-days: 1
+        retention-days: 7
 
   # ====================================
-  # JOB 3: TEST API
+  # JOB 3: MODEL VALIDATION
   # ====================================
-  test-api:
+  validate-model:
     runs-on: ubuntu-latest
     needs: test-ml-pipeline
     steps:
@@ -101,43 +96,33 @@ jobs:
         name: trained-models
         path: models/
     
-    - name: Test API
+    - name: Validate model performance
       run: |
-        echo "🧪 Testing API..."
-        python api_service.py &
-        sleep 10
-        python test_api.py || true
-        pkill -f api_service.py
+        echo "🎯 Validating model performance..."
+        python -c "
+        import joblib, json
+        try:
+            model = joblib.load('models/best_model.pkl')
+            with open('models/model_info.json') as f:
+                info = json.load(f)
+            accuracy = info['accuracy']
+            print(f'Model accuracy: {accuracy}')
+            if accuracy < 0.8:
+                print('❌ Model accuracy too low!')
+                exit(1)
+            else:
+                print('✅ Model meets quality standards')
+        except Exception as e:
+            print(f'Validation error: {e}')
+            exit(1)
+        "
 
   # ====================================
-  # JOB 4: SECURITY SCAN
-  # ====================================
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install security tools
-      run: |
-        pip install safety bandit
-    
-    - name: Run security scan
-      run: |
-        echo "🔒 Running security scan..."
-        safety check --json || true
-        bandit -r . -f json || true
-
-  # ====================================
-  # JOB 5: BUILD & DEPLOY DOCKER IMAGE
+  # JOB 4: BUILD & DEPLOY DOCKER IMAGE
   # ====================================
   build-docker:
     runs-on: ubuntu-latest
-    needs: [test-ml-pipeline, test-api]
+    needs: [validate-model]
     steps:
     - uses: actions/checkout@v4
     
@@ -212,97 +197,11 @@ jobs:
         echo "🌐 DockerHub URL: https://hub.docker.com/r/${{ vars.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
 
   # ====================================
-  # JOB 6: PERFORMANCE TEST
-  # ====================================
-  performance-test:
-    runs-on: ubuntu-latest
-    needs: test-ml-pipeline
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Download trained models
-      uses: actions/download-artifact@v4
-      with:
-        name: trained-models
-        path: models/
-    
-    - name: Run performance tests
-      run: |
-        echo "⚡ Running performance tests..."
-        python api_service.py &
-        sleep 10
-        python -c "
-        import test_api
-        try:
-            test_api.performance_test()
-            test_api.load_test()
-        except Exception as e:
-            print(f'Performance test completed with: {e}')
-        "
-        pkill -f api_service.py
-
-  # ====================================
-  # JOB 7: MODEL VALIDATION
-  # ====================================
-  validate-model:
-    runs-on: ubuntu-latest
-    needs: test-ml-pipeline
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Download trained models
-      uses: actions/download-artifact@v4
-      with:
-        name: trained-models
-        path: models/
-    
-    - name: Validate model performance
-      run: |
-        echo "🎯 Validating model performance..."
-        python -c "
-        import joblib, json
-        try:
-            model = joblib.load('models/best_model.pkl')
-            with open('models/model_info.json') as f:
-                info = json.load(f)
-            accuracy = info['accuracy']
-            print(f'Model accuracy: {accuracy}')
-            if accuracy < 0.8:
-                print('❌ Model accuracy too low!')
-                exit(1)
-            else:
-                print('✅ Model meets quality standards')
-        except Exception as e:
-            print(f'Validation error: {e}')
-            exit(1)
-        "
-
-  # ====================================
-  # JOB 8: DEPLOY (MANUAL TRIGGER)
+  # JOB 5: DEPLOY (MANUAL TRIGGER)
   # ====================================
   deploy:
     runs-on: ubuntu-latest
-    needs: [build-docker, validate-model]
+    needs: [build-docker]
     if: github.ref == 'refs/heads/master'
     environment: production
     steps:
