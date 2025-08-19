@@ -56,19 +56,18 @@ jobs:
         echo "Branch: ${{ github.ref }}"
         echo "DOCKERHUB_USERNAME: '${{ vars.DOCKERHUB_USERNAME }}'"
         echo "Has username: ${{ vars.DOCKERHUB_USERNAME != '' }}"
-        echo "Has token: ${{ secrets.DOCKERHUB_TOKEN != '' }}"
         echo "Is master: ${{ github.ref == 'refs/heads/master' }}"
-        echo "Should login: ${{ github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        echo "Should login: ${{ github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' }}"
     
     - name: Log in to Docker Hub
-      if: github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+      if: github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != ''
       uses: docker/login-action@v3
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     
     - name: Manual Docker Hub test (fallback)
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != ''
       run: |
         echo "Testing manual docker login..."
         echo "Username: ${{ vars.DOCKERHUB_USERNAME }}"
@@ -80,7 +79,7 @@ jobs:
       with:
         context: .
         platforms: linux/amd64
-        push: ${{ github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        push: ${{ github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' }}
         tags: |
           ${{ env.DOCKER_IMAGE_NAME }}:latest
           ${{ vars.DOCKERHUB_USERNAME != '' && format('{0}/{1}:latest', vars.DOCKERHUB_USERNAME, env.DOCKER_IMAGE_NAME) || '' }}
