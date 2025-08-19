@@ -1,77 +1,59 @@
-# Dockerfile cho ML Model API
-# Multi-stage build để tối ưu kích thước image
+# Optimized Dockerfile for faster builds
+FROM python:3.12-slim
 
-# Stage 1: Build stage
-FROM python:3.12-slim as builder
-
-# Set environment variables
+# Set environment variables for performance
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies in one layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Copy requirements first for better caching
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
-
-# Stage 2: Production stage
-FROM python:3.12-slim
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH"
-
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy virtual environment from builder stage
-COPY --from=builder /opt/venv /opt/venv
-
-# Create app directory
+# Create app directory and non-root user early
 WORKDIR /app
-
-# Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy application files
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies with optimizations
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Remove build dependencies to reduce image size
+RUN apt-get remove -y gcc g++ && \
+    apt-get autoremove -y && \
+    apt-get clean
+
+# Copy application files (order matters for caching)
 COPY ml_pipeline.py .
 COPY app.py .
 COPY templates/ templates/
+COPY models/ models/
 
-# Create models directory
+# Create models directory with proper permissions
 RUN mkdir -p models && chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
 
-# Expose ports
+# Expose port
 EXPOSE 5001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+# Optimized health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:5001/health || exit 1
 
-# Default command (can be overridden)
+# Run app
 CMD ["python", "app.py"]
 
-# Labels for metadata
+# Metadata
 LABEL maintainer="ML Team" \
-      version="1.0" \
-      description="ML Model API Service" \
-      created="2025-08-19"
+      version="1.0.1" \
+      description="Optimized ML Model API Service"

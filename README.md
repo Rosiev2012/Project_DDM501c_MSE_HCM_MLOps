@@ -17,7 +17,7 @@ Dự án MLOps hoàn chỉnh thực hiện binary classification với productio
 5. **Model Selection**: Automatic best model selection (XGBoost đạt 86.5% accuracy)
 
 ### **🌐 Production Services (3 bước):**
-7. **RESTful API**: Production-ready Flask API với CORS, logging, error handling
+7. **RESTful API**: Production-ready Flask API
 8. **Web Application**: Interactive UI cho end-user predictions
 
 ### **🚀 DevOps & Deployment (3 bước):**
@@ -31,40 +31,6 @@ Dự án MLOps hoàn chỉnh thực hiện binary classification với productio
 - ✅ **Web Interface**: Responsive UI với real-time predictions  
 - ✅ **Docker Ready**: Optimized container cho scalable deployment
 - ✅ **CI/CD Pipeline**: Fully automated testing và deployment workflow
-- ✅ **Error Handling**: Comprehensive error handling và logging
-
-## 🏗️ Cấu trúc dự án
-
-```
-Project_DDM501c_MSE_HCM_MLOps/
-├── .github/workflows/
-│   └── ci-cd.yml              # GitHub Actions CI/CD pipeline
-├── .gitignore                 # Git ignore rules
-├── Dockerfile                 # Docker container configuration
-├── README.md                  # Tài liệu dự án (file này)
-├── SETUP_GUIDE.md            # Hướng dẫn cài đặt chi tiết
-├── WORKFLOW_GUIDE.md         # Hướng dẫn workflow MLOps
-├── requirements.txt          # Python dependencies
-├── docker-compose.yml        # Docker orchestration
-├── 
-├── 🧠 ML Core Files:
-├── ml_pipeline.py            # ML training pipeline (XGBoost, RF, LR)
-├── models/                   # Trained models directory
-│   ├── best_model.pkl       # Best model (XGBoost ~86.5% accuracy)
-│   ├── scaler.pkl          # Data preprocessing scaler
-│   └── model_info.json     # Model metadata & performance
-├── 
-├── 🌐 API & Web Services:
-├── api_service.py           # RESTful API service (port 8000)
-├── app.py                   # Flask web application (port 5001)
-├── test_api.py             # API testing & client
-├── templates/
-│   └── index.html          # Web UI for predictions
-├── 
-├── 🚀 Deployment & Scripts:
-├── deploy_local.sh         # Local deployment script
-└── run_project.sh          # Complete project runner
-```
 
 ### 📂 **Mô tả từng thành phần:**
 
@@ -73,10 +39,7 @@ Project_DDM501c_MSE_HCM_MLOps/
 - **`models/`**: Lưu trữ trained models và metadata
 
 #### **🌐 Services**  
-- **`api_service.py`**: Production-ready API với CORS, logging, error handling
 - **`app.py`**: Web interface cho end-users
-- **`test_api.py`**: Comprehensive API testing suite
-
 #### **🚀 DevOps**
 - **`Dockerfile`**: Multi-stage build cho production deployment
 - **`docker-compose.yml`**: Orchestration cho development environment  
@@ -85,7 +48,6 @@ Project_DDM501c_MSE_HCM_MLOps/
 #### **📖 Documentation**
 - **`README.md`**: Project overview và quick start
 - **`SETUP_GUIDE.md`**: Detailed setup instructions
-- **`WORKFLOW_GUIDE.md`**: MLOps workflow explanation
 
 ## 🔧 Cài đặt và chạy
 
@@ -158,16 +120,6 @@ python app.py
 - 📊 Real-time probability visualization
 - 🎲 Random data generation for testing
 - 📱 Responsive design
-
-#### 5. Run API Tests
-```bash
-python test_api.py
-```
-**Includes:**
-- ✅ Health checks
-- ✅ Single & batch predictions
-- ✅ Performance benchmarks
-- ✅ Load testing
 
 ## 📊 Model Performance & Benchmarks
 
@@ -300,45 +252,7 @@ Web app model information
 #### **GET /health** 
 Web app health check
 
-## 🎯 Hướng dẫn sử dụng từng bước
-
-### Bước 1: Tạo mô hình đơn giản
-```python
-# Logistic Regression - mô hình cơ bản nhất
-simple_model = LogisticRegression(random_state=42)
-simple_model.fit(X_train, y_train)
-```
-
-### Bước 2: Tuning siêu tham số
-```python
-# GridSearchCV cho Logistic Regression
-param_grid = {
-    'C': [0.01, 0.1, 1, 10, 100],
-    'solver': ['liblinear', 'lbfgs'],
-    'max_iter': [100, 200, 500]
-}
-grid_search = GridSearchCV(model, param_grid, cv=5)
-```
-
-### Bước 3: So sánh mô hình
-- Logistic Regression: Baseline
-- Random Forest: Ensemble method
-- XGBoost: Gradient boosting
-
-### Bước 4: Lưu mô hình tốt nhất
-```python
-# Lưu mô hình, scaler và metadata
-joblib.dump(best_model, 'models/best_model.pkl')
-joblib.dump(scaler, 'models/scaler.pkl')
-```
-
-### Bước 5: Deploy web app
-```python
-# Flask app load mô hình và serve predictions
-app = Flask(__name__)
-model = joblib.load('models/best_model.pkl')
-```
-
+## 
 ## 🚨 Troubleshooting & Common Issues
 
 ### **🔥 Critical Issues**
@@ -552,104 +466,6 @@ if: vars.DOCKERHUB_USERNAME != ''
    - `DOCKERHUB_TOKEN`: your-access-token
 3. **Repository variables**:
    - `DOCKERHUB_USERNAME`: your-dockerhub-username
-
-#### **15. Test Failures in CI**
-```bash
-❌ Error: AssertionError: Test failed
-```
-**Debug**:
-```bash
-# Run tests locally first
-python -m pytest test_api.py -v
-python test_api.py
-
-# Check test dependencies
-pip install pytest requests
-```
-
-### **📊 Performance Issues**
-
-#### **16. API Response Slow (>1s)**
-**Optimization**:
-```python
-# Model caching - đã implement
-@lru_cache(maxsize=1)
-def load_model():
-    return joblib.load('models/best_model.pkl')
-
-# Batch processing cho multiple requests
-# Connection pooling cho database (if needed)
-```
-
-#### **17. Memory Usage High**
-**Monitoring**:
-```bash
-# Check memory usage
-docker stats CONTAINER_NAME
-htop  # Linux
-Activity Monitor  # macOS
-
-# Optimize model size
-# Use model quantization nếu cần
-```
-
-### **🔐 Security Issues**
-
-#### **18. Exposed Secrets in Logs**
-**Prevention**: ✅ **Đã implement**
-```python
-# No secrets in logs
-app.logger.info(f"Prediction made for features: {len(features)} items")
-# Không log actual feature values
-```
-
-#### **19. API Không có Rate Limiting**
-**Future Enhancement**:
-```python
-from flask_limiter import Limiter
-limiter = Limiter(app, key_func=get_remote_address)
-
-@app.route('/api/predict')
-@limiter.limit("10 per minute")
-def predict():
-    pass
-```
-
-### **🛠️ Quick Fixes Commands**
-
-```bash
-# 🔄 Complete Reset
-rm -rf .venv models/ __pycache__/
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python ml_pipeline.py
-
-# 🐳 Docker Reset  
-docker stop $(docker ps -aq)
-docker rm $(docker ps -aq)
-docker system prune -f
-docker build -t ml-model-api:v1.0 .
-
-# 📦 Dependencies Reset
-pip freeze > current_requirements.txt
-pip uninstall -r current_requirements.txt -y
-pip install -r requirements.txt
-
-# 🌐 Port Reset
-sudo lsof -ti:8000 | xargs kill -9
-sudo lsof -ti:5001 | xargs kill -9
-```
-
-### **📞 Khi cần hỗ trợ**
-
-1. **Check logs**: `tail -f app.log` hoặc `docker logs container_name`
-2. **GitHub Issues**: Create issue với error logs
-3. **Debug mode**: Set `DEBUG=True` trong Flask apps
-4. **Health checks**: Luôn test `/api/health` endpoint trước
-
-> **💡 Tip**: Luôn chạy `python ml_pipeline.py` trước khi start services!
-
 ## 🔄 Complete MLOps Workflow
 
 ### **📋 Pre-deployment Checklist**

@@ -1,6 +1,6 @@
 {
   "model_name": "XGBoost",
-  "accuracy": 0.865,
+  "accuracy": 0.8683333333333333,
   "features": 10,
   "training_samples": 1400
 }

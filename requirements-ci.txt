@@ -1,0 +1,9 @@
+# Minimal requirements for CI/CD testing
+scikit-learn>=1.5.0
+pandas>=2.2.0
+numpy>=1.26.0
+xgboost>=2.0.0
+joblib>=1.4.0
+
+# Flask for testing only (not needed for model training in CI)
+flask>=3.0.0
