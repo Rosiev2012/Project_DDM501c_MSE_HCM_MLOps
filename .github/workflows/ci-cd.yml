@@ -74,6 +74,12 @@ jobs:
         # Try manual login to see exact error
         echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ vars.DOCKERHUB_USERNAME }}" --password-stdin || echo "Manual login failed"
     
+    - name: Debug Docker tags
+      run: |
+        echo "Docker image name: ${{ env.DOCKER_IMAGE_NAME }}"
+        echo "Will push as: ${{ vars.DOCKERHUB_USERNAME != '' && format('{0}/{1}:latest', vars.DOCKERHUB_USERNAME, env.DOCKER_IMAGE_NAME) || env.DOCKER_IMAGE_NAME }}"
+        echo "Username: ${{ vars.DOCKERHUB_USERNAME }}"
+    
     - name: Build Docker image (fast)
       uses: docker/build-push-action@v5
       with:
@@ -81,8 +87,7 @@ jobs:
         platforms: linux/amd64
         push: ${{ github.ref == 'refs/heads/master' && vars.DOCKERHUB_USERNAME != '' }}
         tags: |
-          ${{ env.DOCKER_IMAGE_NAME }}:latest
-          ${{ vars.DOCKERHUB_USERNAME != '' && format('{0}/{1}:latest', vars.DOCKERHUB_USERNAME, env.DOCKER_IMAGE_NAME) || '' }}
+          ${{ vars.DOCKERHUB_USERNAME != '' && format('{0}/{1}:latest', vars.DOCKERHUB_USERNAME, env.DOCKER_IMAGE_NAME) || env.DOCKER_IMAGE_NAME }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         outputs: ${{ github.ref != 'refs/heads/master' && 'type=docker,dest=/tmp/ml-model-api.tar' || '' }}
