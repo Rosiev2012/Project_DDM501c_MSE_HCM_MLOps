@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "DOCKERFILE"
+  },
+  "deploy": {
+    "startCommand": "python api_service.py",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 100
+  }
+}

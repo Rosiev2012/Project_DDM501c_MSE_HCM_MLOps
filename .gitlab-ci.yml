@@ -1,0 +1,246 @@
+# GitLab CI/CD Pipeline cho ML Model API
+# =====================================
+
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  # Docker registry settings
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE_NAME: $CI_REGISTRY_USER/ml-model-api
+  DOCKER_TAG: $CI_COMMIT_SHORT_SHA
+  DOCKER_LATEST: $CI_REGISTRY_USER/ml-model-api:latest
+  
+  # Python settings
+  PYTHON_VERSION: "3.12"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Cache để tăng tốc build
+cache:
+  paths:
+    - .cache/pip/
+    - venv/
+    - models/
+
+# Template cho Python setup
+.python_template: &python_setup
+  image: python:3.12-slim
+  before_script:
+    - apt-get update && apt-get install -y gcc g++
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip setuptools wheel
+    - pip install -r requirements.txt
+
+# =====================================
+# STAGE 1: TESTING
+# =====================================
+
+# Lint và Code Quality
+lint_code:
+  stage: test
+  <<: *python_setup
+  script:
+    - pip install flake8 black isort
+    - echo "🔍 Running code linting..."
+    - flake8 --max-line-length=88 --ignore=E203,W503 *.py
+    - echo "✅ Linting completed"
+  allow_failure: true
+
+# Unit Tests
+test_ml_pipeline:
+  stage: test
+  <<: *python_setup
+  script:
+    - echo "🧪 Testing ML Pipeline..."
+    - python ml_pipeline.py
+    - echo "✅ ML Pipeline test completed"
+    - ls -la models/
+  artifacts:
+    paths:
+      - models/
+    expire_in: 1 hour
+
+# API Tests
+test_api:
+  stage: test
+  <<: *python_setup
+  script:
+    - echo "🧪 Testing API..."
+    - python ml_pipeline.py  # Tạo model trước
+    - python api_service.py &
+    - sleep 10  # Chờ API khởi động
+    - python test_api.py
+    - echo "✅ API test completed"
+  needs:
+    - test_ml_pipeline
+
+# Security Scan
+security_scan:
+  stage: test
+  image: python:3.12-slim
+  script:
+    - pip install safety bandit
+    - echo "🔒 Running security scan..."
+    - safety check --json || true
+    - bandit -r . -f json || true
+    - echo "✅ Security scan completed"
+  allow_failure: true
+
+# =====================================
+# STAGE 2: BUILD
+# =====================================
+
+# Build Docker Image
+build_docker:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+  script:
+    - echo "🐳 Building Docker image..."
+    - docker build -t $DOCKER_IMAGE_NAME:$DOCKER_TAG .
+    - docker tag $DOCKER_IMAGE_NAME:$DOCKER_TAG $DOCKER_LATEST
+    - echo "📤 Pushing to DockerHub..."
+    - docker push $DOCKER_IMAGE_NAME:$DOCKER_TAG
+    - docker push $DOCKER_LATEST
+    - echo "✅ Docker build and push completed"
+  needs:
+    - test_ml_pipeline
+    - test_api
+  only:
+    - main
+    - develop
+    - merge_requests
+
+# Build cho Merge Request (không push)
+build_mr:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - echo "🐳 Building Docker image for MR..."
+    - docker build -t $DOCKER_IMAGE_NAME:mr-$CI_MERGE_REQUEST_IID .
+    - echo "✅ MR Docker build completed"
+  needs:
+    - test_ml_pipeline
+  only:
+    - merge_requests
+
+# =====================================
+# STAGE 3: DEPLOY
+# =====================================
+
+# Deploy to Development
+deploy_dev:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "🚀 Deploying to Development..."
+    - echo "Image: $DOCKER_LATEST"
+    - echo "Tag: $DOCKER_TAG"
+    # Thêm deployment commands ở đây
+    - echo "✅ Development deployment completed"
+  environment:
+    name: development
+    url: http://dev.ml-api.example.com
+  needs:
+    - build_docker
+  only:
+    - develop
+
+# Deploy to Production
+deploy_prod:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl
+  script:
+    - echo "🚀 Deploying to Production..."
+    - echo "Image: $DOCKER_LATEST"
+    - echo "Tag: $DOCKER_TAG"
+    # Thêm deployment commands ở đây
+    - echo "✅ Production deployment completed"
+  environment:
+    name: production
+    url: http://ml-api.example.com
+  needs:
+    - build_docker
+  only:
+    - main
+  when: manual  # Require manual approval
+
+# =====================================
+# ADDITIONAL JOBS
+# =====================================
+
+# Performance Testing
+performance_test:
+  stage: test
+  <<: *python_setup
+  script:
+    - echo "⚡ Running performance tests..."
+    - python ml_pipeline.py
+    - python api_service.py &
+    - sleep 10
+    - python -c "
+      import test_api
+      test_api.performance_test()
+      test_api.load_test()
+      "
+    - echo "✅ Performance test completed"
+  needs:
+    - test_ml_pipeline
+  allow_failure: true
+
+# Model Validation
+validate_model:
+  stage: test
+  <<: *python_setup
+  script:
+    - echo "🎯 Validating model performance..."
+    - python ml_pipeline.py
+    - python -c "
+      import joblib, json
+      model = joblib.load('models/best_model.pkl')
+      with open('models/model_info.json') as f:
+          info = json.load(f)
+      accuracy = info['accuracy']
+      print(f'Model accuracy: {accuracy}')
+      if accuracy < 0.8:
+          print('❌ Model accuracy too low!')
+          exit(1)
+      else:
+          print('✅ Model meets quality standards')
+      "
+    - echo "✅ Model validation completed"
+  artifacts:
+    reports:
+      junit: model_validation.xml
+  needs:
+    - test_ml_pipeline
+
+# Cleanup
+cleanup:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "🧹 Cleaning up old artifacts..."
+    - echo "✅ Cleanup completed"
+  when: always
+  needs:
+    - deploy_dev
+    - deploy_prod
+  only:
+    - main
+    - develop
