@@ -1,4 +1,4 @@
-name: MLOps CI/CD Pipeline (Ultra Fast <5min)
+name: MLOps CI/CD Pipeline (Full Production Pipeline)
 
 on:
   push:
@@ -36,8 +36,8 @@ jobs:
         echo "🔍 Syntax check..."
         python -m py_compile *.py
         
-        echo "🤖 Fast ML pipeline..."
-        timeout 120s python ml_pipeline_ci.py || echo "Pipeline completed"
+        echo "🤖 Full ML pipeline..."
+        timeout 300s python ml_pipeline.py || echo "Pipeline completed"
         
         echo "🎯 Model validation..."
         python -c "
