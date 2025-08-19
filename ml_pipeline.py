@@ -4,14 +4,13 @@
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import json
 from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.metrics import classification_report, accuracy_score
 from xgboost import XGBClassifier
 import joblib
 import warnings
@@ -230,7 +229,6 @@ model_info = {
     'training_samples': X_train_large.shape[0]
 }
 
-import json
 with open('models/model_info.json', 'w') as f:
     json.dump(model_info, f, indent=2)
 print(f"✅ Đã lưu thông tin mô hình tại: models/model_info.json")
